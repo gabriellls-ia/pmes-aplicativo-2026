@@ -1,7 +1,12 @@
-const KEY = 'pmes_simulado_results_v1';
+const KEY = 'pmes_simulado_results_v2';
 
 function read() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+}
+
+function correctIndex(q) {
+  if (Number.isInteger(q?.answer)) return q.answer;
+  return Array.isArray(q?.alternatives) ? q.alternatives.findIndex(a => a?.isCorrect || a?.is_correct) : -1;
 }
 
 export function savePmesResult({ round, questions, answers }) {
@@ -11,11 +16,12 @@ export function savePmesResult({ round, questions, answers }) {
     completedAt: new Date().toISOString(),
     total: questions.length,
     answered: Object.keys(answers).length,
-    score: questions.reduce((n, q, i) => n + (answers[i] != null && q.alternatives?.[answers[i]]?.isCorrect ? 1 : 0), 0),
+    score: questions.reduce((n, q, i) => n + (answers[i] != null && answers[i] === correctIndex(q) ? 1 : 0), 0),
     errors: questions.flatMap((q, i) => {
       const selected = answers[i];
-      if (selected == null || q.alternatives?.[selected]?.isCorrect) return [];
-      return [{ questionId: q.id, questionNumber: q.question_number, subjectId: q.subject_id, topicId: q.topic_id, selected, correct: q.alternatives.findIndex(a => a.isCorrect) }];
+      const correct = correctIndex(q);
+      if (selected == null || selected === correct) return [];
+      return [{ questionId: q.id, questionNumber: q.questionNumber ?? q.question_number, subjectId: q.subjectId ?? q.subject_id, topicId: q.topicId ?? q.topic_id, selected, correct }];
     }),
   };
   const all = [result, ...read()].slice(0, 50);
