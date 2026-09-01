@@ -1,13 +1,20 @@
 // Adapter that keeps the Claude app's local question shape while adding
 // Supabase PMES rounds without pretending they are official IDECAN questions.
 export function adaptPmesQuestion(q) {
+  const alternatives = (q.alternatives || []).map((a) => ({
+    text: a.text ?? a.option_text ?? '',
+    isCorrect: Boolean(a.isCorrect ?? a.is_correct),
+    explanation: a.explanation ?? null,
+  }));
+  const answer = alternatives.findIndex((a) => a.isCorrect);
   return {
     id: `supabase-${q.id}`,
     prompt: q.prompt || q.statement || '',
-    alternatives: (q.alternatives || []).map((a) => a.text ?? a.option_text ?? ''),
-    answer: Math.max(0, (q.alternatives || []).findIndex((a) => a.isCorrect ?? a.is_correct)),
-    explanation: q.explanation || 'Explicação não cadastrada na fonte.',
+    alternatives,
+    answer: answer >= 0 ? answer : null,
+    explanation: q.explanation || null,
     subject: q.subject_id,
+    subjectId: q.subject_id,
     topicId: q.topic_id,
     questionNumber: q.question_number,
     examName: q.exam_name,
