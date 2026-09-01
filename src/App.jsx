@@ -1,15 +1,16 @@
-import React, { Component, useState } from 'react';
-import ClaudePmesApp from '../revisao-pmes-4materias.jsx';
+import React, { Component, lazy, Suspense, useState } from 'react';
 import RemotePmesSimulado from './RemotePmesSimulado.jsx';
 import { PMES_ROUNDS } from './pmesRoundCatalog.js';
+
+const ClaudePmesApp = lazy(() => import('../revisao-pmes-4materias.jsx'));
 
 class ClaudeBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false, message: '' };
+    this.state = { failed: false };
   }
-  static getDerivedStateFromError(error) {
-    return { failed: true, message: error?.message || 'Erro inesperado ao carregar o aplicativo.' };
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
   render() {
     if (this.state.failed) return this.props.fallback;
@@ -66,7 +67,9 @@ function RemoteEntry() {
   return (
     <>
       <ClaudeBoundary fallback={<FallbackHome onOpenSimulados={openSimulados} />}>
-        <ClaudePmesApp />
+        <Suspense fallback={<FallbackHome onOpenSimulados={openSimulados} />}>
+          <ClaudePmesApp />
+        </Suspense>
       </ClaudeBoundary>
       <button onClick={openSimulados} aria-label="Abrir simulados PMES" style={{ position:'fixed', right:16, bottom:16, zIndex:5000, padding:'12px 16px', borderRadius:999, border:'1px solid #313945', background:'#1D222A', color:'#EDEBE4', boxShadow:'0 6px 24px rgba(0,0,0,.35)', cursor:'pointer', fontWeight:700 }}>
         Simulados PMES
