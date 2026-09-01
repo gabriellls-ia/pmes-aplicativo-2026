@@ -11,6 +11,12 @@ const SUBJECTS = {
   '7e7b5dc3-5210-4df0-9e77-b23419144cf2': 'Raciocínio Lógico-Matemático',
 };
 
+function errorMessage(error) {
+  if (!error) return 'Rodada inválida ou indisponível.';
+  if (typeof error === 'string') return error;
+  return error?.message || 'Não foi possível carregar a rodada.';
+}
+
 export default function RemotePmesSimulado({ round = 1, onExit }) {
   const [questions, setQuestions] = useState(null);
   const [error, setError] = useState(null);
@@ -23,8 +29,13 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
     setQuestions(null); setError(null); setResult(null); setIndex(0); setAnswers({});
     getPmesRound(round).then((r) => {
       if (!alive) return;
-      if (!r.data?.length || !validateRound(r.data)) setError(r.error || 'Rodada inválida ou indisponível.');
-      else setQuestions(r.data.slice().sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0)).map(adaptPmesQuestion));
+      if (!r.data?.length || !validateRound(r.data)) {
+        setError(errorMessage(r.error));
+        return;
+      }
+      setQuestions(r.data.slice().sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0)).map(adaptPmesQuestion));
+    }).catch((err) => {
+      if (alive) setError(errorMessage(err));
     });
     return () => { alive = false; };
   }, [round]);
@@ -36,14 +47,14 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
     setResult(saved);
   };
 
-  if (error) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}><h2>Simulado PMES — Rodada {round}</h2><p>{error}</p><button onClick={onExit}>Voltar</button></div>;
-  if (!questions) return <div style={{ padding: 24, textAlign: 'center' }}>Carregando Rodada {round}…</div>;
-  if (result) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}><h2>Resultado — Rodada {round}</h2><p><strong>{result.score}/{result.total}</strong> questões acertadas.</p><p>Percentual: <strong>{Math.round(result.score / result.total * 100)}%</strong></p><p>{result.errors.length} erro(s) registrados para revisão.</p><button onClick={onExit}>Voltar ao aplicativo</button></div>;
+  if (error) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}><h2>Simulado PMES — Rodada {round}</h2><p>{error}</p><button onClick={onExit}>Voltar</button></div>;
+  if (!questions) return <div style={{ padding: 24, textAlign: 'center', fontFamily: 'system-ui,sans-serif' }}>Carregando Rodada {round}…</div>;
+  if (result) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}><h2>Resultado — Rodada {round}</h2><p><strong>{result.score}/{result.total}</strong> questões acertadas.</p><p>Percentual: <strong>{Math.round(result.score / result.total * 100)}%</strong></p><p>{result.errors.length} erro(s) registrados para revisão.</p><button onClick={onExit}>Voltar ao aplicativo</button></div>;
 
   const current = questions[index];
   const selected = answers[index];
   const answered = selected != null;
-  return <div style={{ padding: 16, maxWidth: 820, margin: '0 auto' }}>
+  return <div style={{ padding: 16, maxWidth: 820, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}><strong>PMES • Rodada {round}</strong><span>{index + 1}/80 • {SUBJECTS[current.subject] || SUBJECTS[current.subject_id] || 'Matéria'}</span></div>
     <div style={{ padding: 18, borderRadius: 14, border: '1px solid #ddd' }}>
       {current.requiresImage && <p role="note"><strong>⚠️ Questão visual:</strong> a fonte original contém elemento gráfico que ainda não foi incorporado.</p>}
