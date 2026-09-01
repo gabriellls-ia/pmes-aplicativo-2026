@@ -1,12 +1,44 @@
 const KEY = 'pmes_simulado_results_v2';
+const DRAFT_KEY = 'pmes_simulado_drafts_v1';
 
 function read() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
 }
 
+function readDrafts() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch { return {}; }
+}
+
 function correctIndex(q) {
   if (Number.isInteger(q?.answer)) return q.answer;
   return Array.isArray(q?.alternatives) ? q.alternatives.findIndex(a => a?.isCorrect || a?.is_correct) : -1;
+}
+
+export function savePmesDraft({ round, answers, index = 0 }) {
+  try {
+    const drafts = readDrafts();
+    drafts[String(round)] = {
+      round,
+      answers: { ...answers },
+      index,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+  } catch {}
+}
+
+export function getPmesDraft(round) {
+  const draft = readDrafts()[String(round)];
+  if (!draft || draft.round !== round) return null;
+  return draft;
+}
+
+export function clearPmesDraft(round) {
+  try {
+    const drafts = readDrafts();
+    delete drafts[String(round)];
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+  } catch {}
 }
 
 export function savePmesResult({ round, questions, answers }) {
@@ -26,6 +58,7 @@ export function savePmesResult({ round, questions, answers }) {
   };
   const all = [result, ...read()].slice(0, 50);
   try { localStorage.setItem(KEY, JSON.stringify(all)); } catch {}
+  clearPmesDraft(round);
   return result;
 }
 
