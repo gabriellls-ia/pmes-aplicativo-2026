@@ -1,0 +1,12 @@
+{
+  "name": "PMES Estudos 2026",
+  "short_name": "PMES 2026",
+  "description": "Dossiê pessoal de estudos para PMES Soldado Combatente 2026",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14171C",
+  "theme_color": "#14171C",
+  "lang": "pt-BR",
+  "icons": []
+}
