@@ -1,41 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Browser-safe Supabase client. Configure these in Vercel as:
-// VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-// Never expose a service_role key in the frontend.
+// Browser-safe Supabase client. Configure in Vercel as VITE_SUPABASE_URL and
+// VITE_SUPABASE_ANON_KEY. Never expose a service_role key in the frontend.
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = url && anonKey ? createClient(url, anonKey) : null;
 
 const QUESTION_SELECT = `
-  id,
-  subject_id,
-  topic_id,
-  statement,
-  question_type,
-  origin,
-  exam_board,
-  exam_name,
-  exam_year,
-  question_number,
-  source_reference,
-  source_url,
-  difficulty,
-  priority,
-  explanation,
-  active,
-  reviewed,
-  external_id,
-  source_type,
+  id, subject_id, topic_id, statement, question_type, origin, exam_board,
+  exam_name, exam_year, question_number, source_reference, source_url,
+  difficulty, priority, explanation, active, reviewed, external_id, source_type,
   provenance,
-  question_options (
-    id,
-    option_key,
-    option_text,
-    is_correct,
-    explanation
-  )
+  question_options ( id, option_key, option_text, is_correct, explanation )
 `;
 
 function normalizeQuestion(row) {
@@ -55,9 +32,6 @@ function normalizeQuestion(row) {
   };
 }
 
-/** Load reviewed/active PMES questions from Supabase.
- * Filters are optional so the same function can power study and simulated exams.
- */
 export async function loadRemoteQuestions({
   limit = 240,
   subjectId = null,
@@ -83,12 +57,15 @@ export async function loadRemoteQuestions({
   return { data: error ? null : (data || []).map(normalizeQuestion), error };
 }
 
-/** Load one of the three 80-question PMES rounds in its original order. */
 export async function loadPmesRound(roundNumber) {
-  return loadRemoteQuestions({
-    limit: 80,
-    examName: `Rodada ${roundNumber} PM-ES 2026`,
-  });
+  const names = {
+    1: '1ª Rodada PM-ES — Soldado Combatente',
+    2: '2ª Rodada PM-ES — Soldado Combatente',
+    3: '3ª Rodada PM-ES — Soldado Combatente',
+  };
+  const examName = names[Number(roundNumber)];
+  if (!examName) return { data: null, error: new Error('Rodada PMES inválida') };
+  return loadRemoteQuestions({ limit: 80, examName });
 }
 
 export function isSupabaseConfigured() {
