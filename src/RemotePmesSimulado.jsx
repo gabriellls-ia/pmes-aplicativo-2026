@@ -11,11 +11,8 @@ const SUBJECTS = {
   '7e7b5dc3-5210-4df0-9e77-b23419144cf2': 'Raciocínio Lógico-Matemático',
 };
 
-function errorMessage(error) {
-  if (!error) return 'Rodada inválida ou indisponível.';
-  if (typeof error === 'string') return error;
-  return error?.message || 'Não foi possível carregar a rodada.';
-}
+const text = (value) => String(value ?? '');
+const errorMessage = (error) => text(error?.message || error) || 'Não foi possível carregar a rodada.';
 
 export default function RemotePmesSimulado({ round = 1, onExit }) {
   const [questions, setQuestions] = useState(null);
@@ -24,44 +21,46 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    let alive = true;
+  const load = () => {
     setQuestions(null); setError(null); setResult(null); setIndex(0); setAnswers({});
     getPmesRound(round).then((r) => {
-      if (!alive) return;
-      if (!r.data?.length || !validateRound(r.data)) {
-        setError(errorMessage(r.error));
+      if (!r?.data?.length || !validateRound(r.data)) {
+        setError(errorMessage(r?.error));
         return;
       }
-      setQuestions(r.data.slice().sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0)).map(adaptPmesQuestion));
-    }).catch((err) => {
-      if (alive) setError(errorMessage(err));
-    });
-    return () => { alive = false; };
-  }, [round]);
+      try {
+        const adapted = r.data.slice().sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0)).map(adaptPmesQuestion);
+        if (adapted.length !== 80) throw new Error('A rodada não contém exatamente 80 questões.');
+        setQuestions(adapted);
+      } catch (err) { setError(errorMessage(err)); }
+    }).catch((err) => setError(errorMessage(err)));
+  };
+
+  useEffect(() => { load(); }, [round]);
 
   const score = useMemo(() => questions?.reduce((n, q, i) => n + (answers[i] != null && q.alternatives?.[answers[i]]?.isCorrect ? 1 : 0), 0) ?? 0, [questions, answers]);
 
-  const finish = () => {
-    const saved = savePmesResult({ round, questions, answers });
-    setResult(saved);
-  };
-
-  if (error) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}><h2>Simulado PMES — Rodada {round}</h2><p>{error}</p><button onClick={onExit}>Voltar</button></div>;
-  if (!questions) return <div style={{ padding: 24, textAlign: 'center', fontFamily: 'system-ui,sans-serif' }}>Carregando Rodada {round}…</div>;
-  if (result) return <div style={{ padding: 24, maxWidth: 720, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}><h2>Resultado — Rodada {round}</h2><p><strong>{result.score}/{result.total}</strong> questões acertadas.</p><p>Percentual: <strong>{Math.round(result.score / result.total * 100)}%</strong></p><p>{result.errors.length} erro(s) registrados para revisão.</p><button onClick={onExit}>Voltar ao aplicativo</button></div>;
-
-  const current = questions[index];
+  const finish = () => setResult(savePmesResult({ round, questions, answers }));
+  const current = questions?.[index];
   const selected = answers[index];
+
+  if (error) return <div className="pmes-shell"><div className="pmes-card pmes-center"><div className="pmes-kicker">PMES • SIMULADO</div><h1>Erro ao carregar a Rodada {round}</h1><p className="pmes-error">{error}</p><div className="pmes-actions"><button className="pmes-button pmes-button-primary" onClick={load}>Tentar novamente</button><button className="pmes-button" onClick={onExit}>Voltar</button></div></div></div>;
+  if (!questions) return <div className="pmes-shell"><div className="pmes-card pmes-center"><div className="pmes-kicker">PMES • SIMULADO</div><h1>Carregando Rodada {round}...</h1><p>Preparando as 80 questões.</p><div className="pmes-spinner" /></div></div>;
+  if (result) return <div className="pmes-shell"><div className="pmes-card pmes-result"><div className="pmes-kicker">PMES • RODADA {round}</div><h1>Resultado</h1><div className="pmes-score">{result.score}<span>/80</span></div><p>{Math.round(result.score / result.total * 100)}% de aproveitamento • {result.errors.length} erro(s) para revisão.</p><button className="pmes-button pmes-button-primary" onClick={onExit}>Voltar ao aplicativo</button></div></div>;
+
   const answered = selected != null;
-  return <div style={{ padding: 16, maxWidth: 820, margin: '0 auto', fontFamily: 'system-ui,sans-serif' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}><strong>PMES • Rodada {round}</strong><span>{index + 1}/80 • {SUBJECTS[current.subject] || SUBJECTS[current.subject_id] || 'Matéria'}</span></div>
-    <div style={{ padding: 18, borderRadius: 14, border: '1px solid #ddd' }}>
-      {current.requiresImage && <p role="note"><strong>⚠️ Questão visual:</strong> a fonte original contém elemento gráfico que ainda não foi incorporado.</p>}
-      <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{current.prompt}</p>
-      <div style={{ display: 'grid', gap: 10 }}>{current.alternatives.map((a, i) => <button key={i} disabled={answered} onClick={() => setAnswers((old) => ({ ...old, [index]: i }))} style={{ textAlign: 'left', padding: 14, borderRadius: 10, border: '1px solid #ccc', background: selected === i ? '#eee' : 'transparent' }}><strong>{String.fromCharCode(65 + i)})</strong> {a.text}</button>)}</div>
-      {answered && <div style={{ marginTop: 16 }}><strong>{current.alternatives[selected]?.isCorrect ? '✓ Correta' : `✗ Incorreta — gabarito: ${current.alternatives.findIndex(a => a.isCorrect) >= 0 ? String.fromCharCode(65 + current.alternatives.findIndex(a => a.isCorrect)) : '—'}`}</strong>{current.explanation && <p>{current.explanation}</p>}</div>}
-    </div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, gap: 8 }}><button onClick={onExit}>Sair</button>{index > 0 && <button onClick={() => setIndex(i => i - 1)}>Anterior</button>}{index === 79 ? <button disabled={!answered} onClick={finish}>Finalizar</button> : <button disabled={!answered} onClick={() => setIndex(i => i + 1)}>Próxima</button>}</div>
+  return <div className="pmes-shell pmes-quiz-shell">
+    <header className="pmes-header"><strong>PMES • Rodada {round}</strong><span>{index + 1}/80 • {SUBJECTS[current.subject] || SUBJECTS[current.subject_id] || 'Matéria'}</span></header>
+    <div className="pmes-progress"><div style={{ width: `${((index + 1) / 80) * 100}%` }} /></div>
+    <main className="pmes-card pmes-question-card">
+      <div className="pmes-question-meta">Questão {current.question_number || index + 1}</div>
+      {current.requiresImage && <div className="pmes-image-warning">⚠️ Esta questão possui elemento visual na fonte original.</div>}
+      <div className="pmes-statement">{text(current.prompt)}</div>
+      <div className="pmes-options" role="radiogroup">
+        {current.alternatives.map((a, i) => <button type="button" key={a.id || i} disabled={answered} onClick={() => setAnswers(old => ({ ...old, [index]: i }))} className={`pmes-option ${selected === i ? 'selected' : ''}`}><span className="pmes-option-letter">{a.letter || String.fromCharCode(65 + i)})</span><span className="pmes-option-text">{text(a.text)}</span></button>)}
+      </div>
+      {answered && <div className="pmes-feedback"><strong>{current.alternatives[selected]?.isCorrect ? '✓ Resposta correta' : `✗ Incorreta — gabarito: ${current.alternatives.findIndex(a => a.isCorrect) >= 0 ? String.fromCharCode(65 + current.alternatives.findIndex(a => a.isCorrect)) : '—'}`}</strong>{current.explanation && <p>{text(current.explanation)}</p>}</div>}
+    </main>
+    <footer className="pmes-footer"><button className="pmes-button" onClick={onExit}>Sair</button><button className="pmes-button" disabled={index === 0} onClick={() => setIndex(i => i - 1)}>Anterior</button><div className="pmes-footer-right">{index === 79 ? <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={finish}>Finalizar</button> : <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={() => setIndex(i => i + 1)}>Próxima</button>}</div></footer>
   </div>;
 }
