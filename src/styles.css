@@ -1,0 +1,5 @@
+html, body, #root { margin: 0; min-height: 100%; }
+body { background: #14171C; }
+button, input, select, textarea { font: inherit; }
+* { -webkit-tap-highlight-color: transparent; }
+body { padding-bottom: env(safe-area-inset-bottom); }
