@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Browser-safe Supabase client. Configure in Vercel as VITE_SUPABASE_URL and
-// VITE_SUPABASE_ANON_KEY. Never expose a service_role key in the frontend.
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// The simulator must also work when Vercel environment variables are absent.
+// This is a publishable Supabase key, safe for browser use; database access is
+// still restricted by the project's RLS policies. A service_role key is never used.
+const DEFAULT_SUPABASE_URL = 'https://embsfsyxlcxajsukprxj.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_VPtsLTQQKs8PXjRyIkMivQ_GgIBhEuU';
 
-export const supabase = url && anonKey ? createClient(url, anonKey) : null;
+const url = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_KEY;
+
+export const supabase = createClient(url, anonKey);
 
 const QUESTION_SELECT = `
   id, subject_id, topic_id, statement, question_type, origin, exam_board,
@@ -38,8 +42,6 @@ export async function loadRemoteQuestions({
   examName = null,
   origin = null,
 } = {}) {
-  if (!supabase) return { data: null, error: new Error('Supabase não configurado') };
-
   let query = supabase
     .from('questions')
     .select(QUESTION_SELECT)
@@ -69,5 +71,5 @@ export async function loadPmesRound(roundNumber) {
 }
 
 export function isSupabaseConfigured() {
-  return Boolean(supabase);
+  return true;
 }
