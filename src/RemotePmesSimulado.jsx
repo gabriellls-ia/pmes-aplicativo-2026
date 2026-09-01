@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getPmesRound } from './remoteQuestions';
 import { adaptPmesQuestion } from './pmesQuestionAdapter';
-import { savePmesResult } from './pmesResults';
+import { clearPmesDraft, getPmesDraft, savePmesDraft, savePmesResult } from './pmesResults';
 import { validateRound } from './pmesRoundCatalog';
 
 const SUBJECTS = {
@@ -20,9 +20,15 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [resumeAvailable, setResumeAvailable] = useState(false);
 
   const load = () => {
-    setQuestions(null); setError(null); setResult(null); setIndex(0); setAnswers({});
+    setQuestions(null); setError(null); setResult(null);
+    const draft = getPmesDraft(round);
+    setAnswers(draft?.answers || {});
+    setIndex(Number.isInteger(draft?.index) ? Math.max(0, Math.min(79, draft.index)) : 0);
+    setResumeAvailable(Boolean(draft && Object.keys(draft.answers || {}).length));
+
     getPmesRound(round).then((r) => {
       if (!r?.data?.length || !validateRound(r.data)) {
         setError(errorMessage(r?.error));
@@ -38,11 +44,17 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
 
   useEffect(() => { load(); }, [round]);
 
+  useEffect(() => {
+    if (!questions) return;
+    savePmesDraft({ round, answers, index });
+  }, [round, answers, index, questions]);
+
   const score = useMemo(() => questions?.reduce((n, q, i) => n + (answers[i] != null && q.alternatives?.[answers[i]]?.isCorrect ? 1 : 0), 0) ?? 0, [questions, answers]);
 
   const finish = () => setResult(savePmesResult({ round, questions, answers }));
   const current = questions?.[index];
   const selected = answers[index];
+  const answeredCount = Object.keys(answers).length;
 
   if (error) return <div className="pmes-shell"><div className="pmes-card pmes-center"><div className="pmes-kicker">PMES • SIMULADO</div><h1>Erro ao carregar a Rodada {round}</h1><p className="pmes-error">{error}</p><div className="pmes-actions"><button className="pmes-button pmes-button-primary" onClick={load}>Tentar novamente</button><button className="pmes-button" onClick={onExit}>Voltar</button></div></div></div>;
   if (!questions) return <div className="pmes-shell"><div className="pmes-card pmes-center"><div className="pmes-kicker">PMES • SIMULADO</div><h1>Carregando Rodada {round}...</h1><p>Preparando as 80 questões.</p><div className="pmes-spinner" /></div></div>;
@@ -53,7 +65,8 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
     <header className="pmes-header"><strong>PMES • Rodada {round}</strong><span>{index + 1}/80 • {SUBJECTS[current.subject] || SUBJECTS[current.subject_id] || 'Matéria'}</span></header>
     <div className="pmes-progress"><div style={{ width: `${((index + 1) / 80) * 100}%` }} /></div>
     <main className="pmes-card pmes-question-card">
-      <div className="pmes-question-meta">Questão {current.question_number || index + 1}</div>
+      <div className="pmes-question-meta">Questão {current.question_number || index + 1} • {answeredCount}/80 respondidas</div>
+      {resumeAvailable && index === 0 && answeredCount > 0 && <div className="pmes-image-warning">↩️ Progresso salvo automaticamente neste dispositivo.</div>}
       {current.requiresImage && <div className="pmes-image-warning">⚠️ Esta questão possui elemento visual na fonte original.</div>}
       <div className="pmes-statement">{text(current.prompt)}</div>
       <div className="pmes-options" role="radiogroup">
