@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getPmesRound } from './remoteQuestions';
+import { getPmesDraft, savePmesDraft, savePmesResult } from './pmesResults';
 import { adaptPmesQuestion } from './pmesQuestionAdapter';
-import { clearPmesDraft, getPmesDraft, savePmesDraft, savePmesResult } from './pmesResults';
 import { validateRound } from './pmesRoundCatalog';
 
 const SUBJECTS = {
@@ -20,10 +20,11 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [saved, setSaved] = useState(false);
   const [resumeAvailable, setResumeAvailable] = useState(false);
 
   const load = () => {
-    setQuestions(null); setError(null); setResult(null);
+    setQuestions(null); setError(null); setResult(null); setSaved(false);
     const draft = getPmesDraft(round);
     setAnswers(draft?.answers || {});
     setIndex(Number.isInteger(draft?.index) ? Math.max(0, Math.min(79, draft.index)) : 0);
@@ -46,11 +47,21 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
 
   useEffect(() => {
     if (!questions) return;
-    savePmesDraft({ round, answers, index });
+    setSaved(savePmesDraft({ round, answers, index }));
   }, [round, answers, index, questions]);
 
-  const score = useMemo(() => questions?.reduce((n, q, i) => n + (answers[i] != null && q.alternatives?.[answers[i]]?.isCorrect ? 1 : 0), 0) ?? 0, [questions, answers]);
+  const chooseAnswer = (optionIndex) => {
+    const nextAnswers = { ...answers, [index]: optionIndex };
+    setAnswers(nextAnswers);
+    setSaved(savePmesDraft({ round, answers: nextAnswers, index }));
+  };
 
+  const goTo = (nextIndex) => {
+    setIndex(nextIndex);
+    setSaved(savePmesDraft({ round, answers, index: nextIndex }));
+  };
+
+  const score = useMemo(() => questions?.reduce((n, q, i) => n + (answers[i] != null && q.alternatives?.[answers[i]]?.isCorrect ? 1 : 0), 0) ?? 0, [questions, answers]);
   const finish = () => setResult(savePmesResult({ round, questions, answers }));
   const current = questions?.[index];
   const selected = answers[index];
@@ -65,15 +76,15 @@ export default function RemotePmesSimulado({ round = 1, onExit }) {
     <header className="pmes-header"><strong>PMES • Rodada {round}</strong><span>{index + 1}/80 • {SUBJECTS[current.subject] || SUBJECTS[current.subject_id] || 'Matéria'}</span></header>
     <div className="pmes-progress"><div style={{ width: `${((index + 1) / 80) * 100}%` }} /></div>
     <main className="pmes-card pmes-question-card">
-      <div className="pmes-question-meta">Questão {current.question_number || index + 1} • {answeredCount}/80 respondidas</div>
-      {resumeAvailable && index === 0 && answeredCount > 0 && <div className="pmes-image-warning">↩️ Progresso salvo automaticamente neste dispositivo.</div>}
+      <div className="pmes-question-meta">Questão {current.question_number || index + 1} • {answeredCount}/80 respondidas <span className={saved ? 'pmes-save-ok' : 'pmes-save-pending'}>{saved ? '✓ Salvo' : 'Salvando...'}</span></div>
+      {resumeAvailable && index === 0 && answeredCount > 0 && <div className="pmes-image-warning">↩️ Progresso recuperado automaticamente neste dispositivo.</div>}
       {current.requiresImage && <div className="pmes-image-warning">⚠️ Esta questão possui elemento visual na fonte original.</div>}
       <div className="pmes-statement">{text(current.prompt)}</div>
       <div className="pmes-options" role="radiogroup">
-        {current.alternatives.map((a, i) => <button type="button" key={a.id || i} disabled={answered} onClick={() => setAnswers(old => ({ ...old, [index]: i }))} className={`pmes-option ${selected === i ? 'selected' : ''}`}><span className="pmes-option-letter">{a.letter || String.fromCharCode(65 + i)})</span><span className="pmes-option-text">{text(a.text)}</span></button>)}
+        {current.alternatives.map((a, i) => <button type="button" key={a.id || i} disabled={answered} onClick={() => chooseAnswer(i)} className={`pmes-option ${selected === i ? 'selected' : ''}`}><span className="pmes-option-letter">{a.letter || String.fromCharCode(65 + i)})</span><span className="pmes-option-text">{text(a.text)}</span></button>)}
       </div>
       {answered && <div className="pmes-feedback"><strong>{current.alternatives[selected]?.isCorrect ? '✓ Resposta correta' : `✗ Incorreta — gabarito: ${current.alternatives.findIndex(a => a.isCorrect) >= 0 ? String.fromCharCode(65 + current.alternatives.findIndex(a => a.isCorrect)) : '—'}`}</strong>{current.explanation && <p>{text(current.explanation)}</p>}</div>}
     </main>
-    <footer className="pmes-footer"><button className="pmes-button" onClick={onExit}>Sair</button><button className="pmes-button" disabled={index === 0} onClick={() => setIndex(i => i - 1)}>Anterior</button><div className="pmes-footer-right">{index === 79 ? <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={finish}>Finalizar</button> : <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={() => setIndex(i => i + 1)}>Próxima</button>}</div></footer>
+    <footer className="pmes-footer"><button className="pmes-button" onClick={onExit}>Sair</button><button className="pmes-button" disabled={index === 0} onClick={() => goTo(index - 1)}>Anterior</button><div className="pmes-footer-right">{index === 79 ? <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={finish}>Finalizar</button> : <button className="pmes-button pmes-button-primary" disabled={!answered} onClick={() => goTo(index + 1)}>Próxima</button>}</div></footer>
   </div>;
 }
