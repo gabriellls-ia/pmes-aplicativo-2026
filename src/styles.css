@@ -1,5 +1,45 @@
 html, body, #root { margin: 0; min-height: 100%; }
-body { background: #14171C; }
+body { background: #14171C; color: #F5F7FA; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 button, input, select, textarea { font: inherit; }
-* { -webkit-tap-highlight-color: transparent; }
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 body { padding-bottom: env(safe-area-inset-bottom); }
+.pmes-shell { min-height: 100vh; background: #14171C; color: #F5F7FA; padding: 20px; }
+.pmes-card { max-width: 980px; margin: 0 auto; border: 1px solid #39414D; border-radius: 16px; background: #1B2028; box-shadow: 0 10px 30px rgba(0,0,0,.22); }
+.pmes-center { padding: 42px 28px; text-align: center; margin-top: 8vh; }
+.pmes-kicker { color: #9FC5E8; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.pmes-center h1, .pmes-result h1 { margin: 10px 0 8px; color: #F5F7FA; }
+.pmes-center p, .pmes-result p { color: #B9C2CF; }
+.pmes-error { color: #FFB4AB !important; }
+.pmes-spinner { width: 28px; height: 28px; margin: 22px auto 0; border: 3px solid #39414D; border-top-color: #F5F7FA; border-radius: 50%; animation: pmes-spin .8s linear infinite; }
+@keyframes pmes-spin { to { transform: rotate(360deg); } }
+.pmes-quiz-shell { max-width: 1200px; margin: 0 auto; padding: 0 20px 28px; }
+.pmes-header { min-height: 35px; display: flex; justify-content: space-between; align-items: center; gap: 16px; color: #F5F7FA; }
+.pmes-header span { color: #D3DAE4; }
+.pmes-progress { height: 5px; margin: 0 0 14px; border-radius: 999px; overflow: hidden; background: #303742; }
+.pmes-progress > div { height: 100%; background: #9FC5E8; transition: width .2s ease; }
+.pmes-question-card { padding: 34px 18px 18px; }
+.pmes-question-meta { color: #9FC5E8; font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+.pmes-statement { color: #F5F7FA; font-size: 18px; line-height: 1.65; margin-bottom: 24px; white-space: pre-wrap; }
+.pmes-options { display: grid; gap: 10px; }
+.pmes-option { width: 100%; display: flex; align-items: flex-start; gap: 10px; text-align: left; border: 1px solid #56606D; border-radius: 11px; padding: 15px 16px; background: #20262F; color: #F5F7FA; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
+.pmes-option:hover:not(:disabled) { background: #272E38; border-color: #7D8998; }
+.pmes-option:active:not(:disabled) { transform: translateY(1px); }
+.pmes-option.selected { background: #293746; border-color: #9FC5E8; box-shadow: inset 0 0 0 1px #9FC5E8; }
+.pmes-option:disabled { opacity: 1; cursor: default; }
+.pmes-option-letter { flex: 0 0 auto; font-weight: 800; color: #FFFFFF; }
+.pmes-option-text { color: #F5F7FA; line-height: 1.45; }
+.pmes-image-warning { margin: 0 0 18px; padding: 11px 13px; border: 1px solid #6B5B3E; border-radius: 9px; color: #EAD7A4; background: #2A271F; }
+.pmes-feedback { margin-top: 18px; padding: 14px; border: 1px solid #39414D; border-radius: 10px; background: #20262F; color: #F5F7FA; }
+.pmes-feedback p { color: #C8D0DB; line-height: 1.55; }
+.pmes-footer { max-width: 980px; margin: 16px auto 0; display: flex; align-items: center; gap: 10px; }
+.pmes-footer-right { margin-left: auto; }
+.pmes-button { appearance: none; border: 1px solid #56606D; border-radius: 9px; background: #20262F; color: #F5F7FA; padding: 10px 16px; cursor: pointer; }
+.pmes-button:hover:not(:disabled) { background: #2A313C; }
+.pmes-button:disabled { opacity: .42; cursor: not-allowed; }
+.pmes-button-primary { background: #E8EDF3; border-color: #E8EDF3; color: #14171C; font-weight: 800; }
+.pmes-button-primary:hover:not(:disabled) { background: #FFFFFF; }
+.pmes-actions { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+.pmes-result { padding: 42px 28px; text-align: center; margin-top: 8vh; }
+.pmes-score { font-size: 64px; font-weight: 900; margin-top: 18px; color: #F5F7FA; }
+.pmes-score span { font-size: 26px; color: #9CA7B5; }
+@media (max-width: 700px) { .pmes-shell { padding: 12px; } .pmes-quiz-shell { padding: 0 12px 20px; } .pmes-header { font-size: 13px; } .pmes-question-card { padding: 24px 12px 14px; } .pmes-statement { font-size: 16px; } .pmes-footer { flex-wrap: wrap; } .pmes-footer-right { margin-left: auto; } }
